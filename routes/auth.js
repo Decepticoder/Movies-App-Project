@@ -1,4 +1,3 @@
-// routes/auth.js
 const express = require("express");
 const router = express.Router();
 const User = require("../models/User");
@@ -21,7 +20,7 @@ router.post("/register", async (req, res) => {
     const user = new User({ email, password });
     await user.save();
 
-    req.session.userId = user._id; // 🔐 Set session to keep user logged in
+    req.session.userId = user._id; // Set session to keep user logged in
     res.redirect("/");
   } catch (err) {
     res.render("register", { error: "Registration failed. Please try again." });

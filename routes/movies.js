@@ -5,12 +5,40 @@ const Movie = require("../models/Movie");
 // ─── Home or Movie List ─────────────────────────────────────────────
 router.get("/", async (req, res, next) => {
   if (!req.session.userId) {
-    return res.render("home"); // 👈 show cover page if not logged in
+    return res.render("home"); // show cover page if not logged in
   }
 
+
   try {
-    const movies = await Movie.find().sort({ createdAt: -1 });
-    res.render("index", { movies });
+    const { filterBy, sortBy } = req.query;
+    const allGenres = await Movie.distinct("genres");
+    let filter = {};
+    let sort = {};
+
+    if (filterBy) {
+      if (filterBy.startsWith("rating-")) {
+        const [_, min, max] = filterBy.split("-");
+        const minVal = parseFloat(min);
+        const maxVal = parseFloat(max);
+        if (!isNaN(minVal) && !isNaN(maxVal)) {
+          filter.rating = { $gte: minVal, $lt: maxVal };
+        }
+      } else if (allGenres.includes(filterBy)) {
+        filter.genres = filterBy;
+      }
+    }
+
+    if (sortBy === "asc") sort.rating = 1;
+    else if (sortBy === "desc") sort.rating = -1;
+
+    const movies = await Movie.find(filter).sort(sort);
+
+    res.render("index", {
+      movies,
+      allGenres,
+      filters: { filterBy, sortBy },
+      currentUser: req.session.userId,
+    });
   } catch (err) {
     next(err);
   }
@@ -39,7 +67,7 @@ router.post("/add", async (req, res, next) => {
       year,
       genres: genresArr,
       rating,
-      owner: req.session.userId // ✅ assign current user
+      owner: req.session.userId // assign current user
     });
 
     res.redirect("/");
